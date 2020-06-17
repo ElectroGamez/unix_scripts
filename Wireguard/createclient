@@ -1,5 +1,5 @@
 #!/bin/bash
-PEERPUBKEY="Wireguard server publicKey"
+PEERPUBKEY="Wireguard server pubicKey"
 ENDPOINT="Wireguard server endpoint"
 WIREGUARDFILE="/etc/wireguard/wg0.conf"
 
@@ -82,7 +82,8 @@ then
 fi
 
 # Print config file
-printf "[Interface]\nPrivateKey: ${PRIVKEY}\nAddress: ${ADDRESS}\n\n[Peer]\nPublicKey: ${PEERPUBKEY}\nAllowedIPs: ${IPLIST}\nEndpoint: ${ENDPOINT}\n" > "$FILENAME"
+printf "[Interface]\nPrivateKey = ${PRIVKEY}\nAddress = ${ADDRESS}\n\n[Peer]\nPublicKey = ${PEERPUBKEY}\nAllowedIPs = ${IPLIST}\nEndpoint = ${ENDPOINT}\n" > "$FILENAME"
 
 # If requested generate QR
 [[ -z $GENQR ]] || qrencode -t ansiutf8 -r "$FILENAME"
+
