@@ -1,0 +1,88 @@
+#!/bin/bash
+PEERPUBKEY="Wireguard server publicKey"
+ENDPOINT="Wireguard server endpoint"
+WIREGUARDFILE="/etc/wireguard/wg0.conf"
+
+printUsage() {
+	printf "Usage:
+	-A, --add		Add config to wireguard $WIREGUARDFILE
+	-a, --address		Define the address of the client
+				Example: 10.0.1.20/24
+	-c, --comment		Define a comment that will be added in $WIREGUARDFILE
+				Example: Bob's Work phone
+	-p, --peer-public	Define the peer public key
+				Example: K8TD/BZhLBp7WuCaRtudeoc+9ltvr9hmXmfK/YF5WjQ=
+	-e, --endpoint		Define the endpoint address
+				Example: 8.8.8.8:51820
+	-i, --allowedips	Define the allowed client IP addresses
+				Example: 10.0.1.0/24, 192.168.1.0/24
+	-q, --genqr		Generate a QR code from config
+	-f, --file		Define outfile for client config
+				Example: client.conf
+	-h, --help		Help screen
+"
+}
+
+while [ "$1" != "" ]; do
+    case $1 in
+        -A | --add )            ADDTOSERVER=1
+				;;
+    	-a | --address )	shift
+                                USERADDRESS=$1
+				;;
+    	-c | --comment )	shift
+                                USERCOMMENT=$1
+				;;
+        -p | --peer-pubkey )     shift
+                                USERPEERPUBKEY=$1
+				;;
+	-e | --endpoint )	shift
+                                USERENDPOINT=$1
+				;;
+        -i | --allowedips )     shift
+                                USERIPLIST=$1
+				;;
+	-q | --genqr )		GENQR=1
+				;;
+	-f | --file )		shift
+				USERFILENAME=$1
+				;;
+	-h | --help )           printUsage
+                                exit 0
+                                ;;
+        * )                     printUsage
+                                exit 0
+    esac
+    shift
+done
+
+# Set user defined variables
+[[ -z $USERADDRESS ]] && echo "ERROR: address not defined use -a" && exit 1 || ADDRESS=$USERADDRESS
+[[ -z $USERCOMMENT ]] && COMMENT="0" || COMMENT=$USERCOMMENT
+[[ -z $USERPEERPUBKEY ]] || PEERPUBKEY=$USERPEERPUBKEY
+[[ -z $USERENDPOINT ]] || ENDPOINT=$USERENDPOINT
+[[ -z $USERIPLIST ]] && IPLIST="10.0.0.1/24" || IPLIST=$USERIPLIST
+[[ -z $USERFILENAME ]] && FILENAME="wg0.conf" || FILENAME=$USERFILENAME
+
+# Generate keys
+PRIVKEY=$(wg genkey)
+PUBKEY=$(echo $PRIVKEY | wg pubkey)
+
+if ! [ -z $ADDTOSERVER ]
+then
+	grep "${ADDRESS%/*}/32" $WIREGUARDFILE && echo "This address is already is use in $WIREGUARDFILE" && exit 1
+
+	# Add config to Wireguard interface
+	if [ "$COMMENT" != "0" ]
+	then
+		printf "[Peer]\n# ${COMMENT}\nPublicKey = $PUBKEY\nAllowedIPs = ${ADDRESS%/*}/32\n\n" >> "$WIREGUARDFILE"
+	else
+		printf "[Peer]\nPublicKey = $PUBKEY\nAllowedIPs = ${ADDRESS%/*}/32\n\n" >> "$WIREGUARDFILE"
+	fi
+fi
+
+# Print config file
+printf "[Interface]\nPrivateKey: ${PRIVKEY}\nAddress: ${ADDRESS}\n\n[Peer]\nPublicKey: ${PEERPUBKEY}\nAllowedIPs: ${IPLIST}\nEndpoint: ${ENDPOINT}\n" > "$FILENAME"
+
+# If requested generate QR
+[[ -z $GENQR ]] || qrencode -t ansiutf8 -r "$FILENAME"
