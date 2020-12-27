@@ -1,0 +1,11 @@
+#!/bin/bash
+
+
+lxc launch images:debian/10/amd64 $1
+lxc file push /root/install.sh $1/root/
+
+lxc exec $1 ./install.sh
+
+figlet "$1 Finished!"
+
+printf "\033[0;37m"
